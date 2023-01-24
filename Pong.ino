@@ -3,12 +3,12 @@
 #include <IRremote.h>
 #include "string.h"
 #include "SoftwareSerial.h"
-#include "Timer.h"
 
 
-#define PIN_RECV 4
+int pin_recv = 5;
 
-IRrecv irrecv(4);
+//IRrecv irrecv(4);
+//IRrecv irrecv(5);
 decode_results results;
 LedControl lc = LedControl(11,13,10,2);
 
@@ -20,9 +20,13 @@ int player1 = 224;
 int row = 0;
 int ballPosition[2] = {5,7};
 int ballDirection[2] = {-1,1};
-Timer timer;
 const unsigned long ballAll = 100; 
 unsigned long lastBall;
+
+int lastStatePlayer1 = 1;
+int lastStatePlayer2 = 1;
+
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -35,7 +39,7 @@ void setup() {
   //lc.setDigit(0, 7, (byte)7, false);
   //lc.setDigit(1, 8, (byte)8, false);
   Serial.begin(9600);
-  IrReceiver.begin(PIN_RECV);
+  IrReceiver.begin(pin_recv);
   delay(500);
   
   lc.setRow(1,0,player1);
@@ -43,6 +47,9 @@ void setup() {
   lc.setLed(matrix, ballPosition[0], ballPosition[1], true);
   delay(500);
   
+
+  pinMode(4, INPUT);
+  pinMode(5, INPUT);
 }
 
 long readIR(){
@@ -62,28 +69,30 @@ void setPlayerPos(){
   long buttonValue = readIR();
   switch(buttonValue){
     case 3108437760 :
-      if (player1 < 224){
-        player1 *= 2;
+      if (pin_recv == 4){
+        if (player1 > 7){
+          player1 /= 2;
+        }
+        lc.setRow(1, 0, player1);
+      }else if (pin_recv == 5){
+        if (player2 > 7){
+          player2 /= 2;
+        }
+        lc.setRow(0, 0, player2);
       }
-      lc.setRow(1, 0, player1);
       break;
     case 3927310080 :
-      if (player1 > 7){
-        player1 /= 2;
+      if (pin_recv == 4){
+        if (player1 < 224){
+          player1 *= 2;
+        }
+        lc.setRow(1, 0, player1);     
+      }else if (pin_recv == 5){
+        if (player2 < 224){
+          player2 *= 2;
+        }
+        lc.setRow(0, 0, player2);
       }
-      lc.setRow(1, 0, player1);
-      break;
-    case 4161273600 :
-      if (player2 < 224){
-        player2 *= 2;
-      }
-      lc.setRow(0, 0, player2);
-      break;
-    case 3125149440 :
-      if (player2 > 7){
-        player2 /= 2;
-      }
-      lc.setRow(0, 0, player2);
       break;
   }
 }
@@ -118,7 +127,6 @@ void setDirection(){
         ballDirection[1] = 1;
       }else{
         ballDirection[1] = 0;
-        Serial.println("Ball is lost");
       }
     }
     
@@ -134,7 +142,6 @@ void setDirection(){
         ballDirection[1] = 1;
       }else{
         ballDirection[1] = 0;
-        Serial.println("Ball is lost");
       }
     }
 
@@ -174,8 +181,45 @@ void resetBall(){
   delay(2000);
 }
 
+void changeReceiver(){
+  int value1;
+  int value2;
+
+  value1 = digitalRead( 4 );
+  value2 = digitalRead( 5 );  
+
+  
+  if(value1 != lastStatePlayer1){
+    Serial.println("Change state player 1");
+    if (value1 == 0){
+      pin_recv = 4;
+      IrReceiver.begin(pin_recv);
+      lastStatePlayer1 = value1;
+      Serial.println("Change to player 1");
+
+    }else {
+      lastStatePlayer1 = 1;
+    }
+    
+  }
+
+  if(value2 != lastStatePlayer2){
+    Serial.println("Change state player 2");
+    if (value2 == 0){
+      pin_recv = 5;
+      IrReceiver.begin(pin_recv);
+      lastStatePlayer2 = value2;
+      Serial.println("Change to player 2");
+    }else {
+      lastStatePlayer2 = 1;
+    }
+    
+  }
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
+  changeReceiver();  
   unsigned long topLoop = millis();
   if (topLoop - lastBall >= ballAll) {
     lastBall = topLoop;
@@ -183,5 +227,7 @@ void loop() {
     moveBall();
   }
   setPlayerPos();
+  
+  
 
 }
