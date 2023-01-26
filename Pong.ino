@@ -20,21 +20,20 @@ int player1 = 224;
 int row = 0;
 int ballPosition[2] = {5,7};
 int ballDirection[2] = {-1,1};
-const unsigned long ballAll = 100; 
+unsigned long ballAll = 100; 
 unsigned long lastBall;
 
 int lastStatePlayer1 = 1;
 int lastStatePlayer2 = 1;
 
-
+bool isReseting;
 
 void setup() {
   // put your setup code here, to run once:
   lc.shutdown(0, false);
   lc.shutdown(1, false);
   lc.setIntensity(1,8);
-  lc.setIntensity(0,8);
-  lc.clearDisplay(0);
+  lc.setIntensity(0,8); 
   lc.clearDisplay(1);
   //lc.setDigit(0, 7, (byte)7, false);
   //lc.setDigit(1, 8, (byte)8, false);
@@ -115,6 +114,10 @@ void moveBall(){
 
 void setDirection(){
   if(ballPosition[0] == 1){
+    /*if(ballAll > 50){
+      ballAll /= 2;
+    }*/
+    
     if (matrix == 1){ 
       if(player1 == 7 * power(2, 7 - ballPosition[1])){
         ballDirection[0] = -1;
@@ -178,7 +181,8 @@ void resetBall(){
   ballDirection[0] = 1;
   ballDirection[1] = 0;
   lc.setLed(matrix, ballPosition[0], ballPosition[1], true);
-  delay(2000);
+  ballAll = 2000;
+  isReseting = true;
 }
 
 void changeReceiver(){
@@ -190,13 +194,10 @@ void changeReceiver(){
 
   
   if(value1 != lastStatePlayer1){
-    Serial.println("Change state player 1");
     if (value1 == 0){
       pin_recv = 4;
       IrReceiver.begin(pin_recv);
       lastStatePlayer1 = value1;
-      Serial.println("Change to player 1");
-
     }else {
       lastStatePlayer1 = 1;
     }
@@ -204,12 +205,10 @@ void changeReceiver(){
   }
 
   if(value2 != lastStatePlayer2){
-    Serial.println("Change state player 2");
     if (value2 == 0){
       pin_recv = 5;
       IrReceiver.begin(pin_recv);
       lastStatePlayer2 = value2;
-      Serial.println("Change to player 2");
     }else {
       lastStatePlayer2 = 1;
     }
@@ -219,12 +218,22 @@ void changeReceiver(){
 
 void loop() {
   // put your main code here, to run repeatedly:
-  changeReceiver();  
+  changeReceiver(); 
+  
   unsigned long topLoop = millis();
+
   if (topLoop - lastBall >= ballAll) {
     lastBall = topLoop;
     setDirection();
-    moveBall();
+    if(ballAll!=2000){
+      moveBall();
+    }else if(isReseting){
+      isReseting = false;
+    }else{
+      ballAll = 100;
+    }
+    
+    
   }
   setPlayerPos();
   
